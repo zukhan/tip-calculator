@@ -16,7 +16,11 @@ class ViewController: UIViewController {
     @IBOutlet weak var tipControl: UISegmentedControl!
     @IBOutlet weak var lowerSubView: UIView!
     @IBOutlet var viewController: UIView!
+    @IBOutlet weak var billFieldTopConstraint: NSLayoutConstraint!
 
+    var lightColor = UIColor(red: 0.8902, green: 0.9765, blue: 0.9412, alpha: 1.0)
+    var darkColor = UIColor(red: 0.1569, green: 0.2824, blue: 0.3373, alpha: 1.0)
+    var tipPercentages = [10, 15, 20]
     var hadZeroValue = true
 
     override func viewDidLoad() {
@@ -30,11 +34,9 @@ class ViewController: UIViewController {
             return
         }
 
-        self.viewController.backgroundColor = UIColor.blueColor()
-
         let now = NSDate()
         let secSinceLastEntered = now.timeIntervalSinceDate(dateLastEntered)
-        if secSinceLastEntered < 20 {
+        if secSinceLastEntered < 600 {
             if lastBillAmount == 0 {
                 billField.text = ""
             } else if lastBillAmount % 1 == 0 {
@@ -43,13 +45,8 @@ class ViewController: UIViewController {
                 billField.text = String(format:"%.2f", lastBillAmount)
             }
 
-            if lastBillAmount > 0 {
-                hadZeroValue = false
-            }
-            updateValues()
+            recalculateValues()
         }
-
-        applyLightTheme()
     }
 
     override func viewDidAppear(_animated: Bool) {
@@ -59,18 +56,18 @@ class ViewController: UIViewController {
 
         billField.becomeFirstResponder()
 
-        updateValues()
+        recalculateValues()
     }
 
     func initializeView() {
         let defaults = NSUserDefaults.standardUserDefaults()
-        let first = String(defaults.integerForKey("firstPercentage"))
-        let second = String(defaults.integerForKey("secondPercentage"))
-        let third = String(defaults.integerForKey("thirdPercentage"))
+        for (i, rawTip) in defaults.arrayForKey("tipPercentages")!.enumerate() {
+            tipPercentages[i] = rawTip as! Int
+        }
 
-        tipControl.setTitle(first, forSegmentAtIndex: 0)
-        tipControl.setTitle(second, forSegmentAtIndex: 1)
-        tipControl.setTitle(third, forSegmentAtIndex: 2)
+        tipControl.setTitle(String(tipPercentages[0]) + "%", forSegmentAtIndex: 0)
+        tipControl.setTitle(String(tipPercentages[1]) + "%", forSegmentAtIndex: 1)
+        tipControl.setTitle(String(tipPercentages[2]) + "%", forSegmentAtIndex: 2)
 
         let lightTheme = defaults.boolForKey("lightTheme")
         if lightTheme {
@@ -85,35 +82,35 @@ class ViewController: UIViewController {
     }
 
     @IBAction func onEditingChanged(sender: AnyObject) {
-        updateValues()
+        recalculateValues()
     }
 
-    func updateValues() {
+    func recalculateValues() {
         var billAmount = 0.0
         if billField.text != "" {
             billAmount = Double(billField.text!)!
         }
 
-        if billAmount > 0 {
-            showView(showPopulatedView, withAnimation: hadZeroValue)
+        if billAmount > 0 && hadZeroValue {
+            showView(showPopulatedView)
             hadZeroValue = false
-        } else {
-            showView(showInitialView, withAnimation: !hadZeroValue)
+        } else if billAmount == 0 && !hadZeroValue {
+            showView(showInitialView)
             hadZeroValue = true
         }
 
-        var tipPercentages = [
-            Double(tipControl.titleForSegmentAtIndex(0)!)! / 100,
-            Double(tipControl.titleForSegmentAtIndex(1)!)! / 100,
-            Double(tipControl.titleForSegmentAtIndex(2)!)! / 100
+        let tipDecimalPercentages = [
+            Double(tipPercentages[0]) / 100,
+            Double(tipPercentages[1]) / 100,
+            Double(tipPercentages[2]) / 100
         ]
 
-        let tipPercentage = tipPercentages[tipControl.selectedSegmentIndex]
+        let tipPercentage = tipDecimalPercentages[tipControl.selectedSegmentIndex]
         let tip = billAmount * tipPercentage
         let total = billAmount + tip
 
-        tipLabel.text = String(format: "$%.2f", tip)
-        totalLabel.text = String(format: "$%.2f", total)
+        tipLabel.text = NSNumberFormatter.localizedStringFromNumber(tip, numberStyle: NSNumberFormatterStyle.CurrencyStyle)
+        totalLabel.text = NSNumberFormatter.localizedStringFromNumber(total, numberStyle: NSNumberFormatterStyle.CurrencyStyle)
 
         let date = NSDate()
         let defaults = NSUserDefaults.standardUserDefaults()
@@ -121,59 +118,45 @@ class ViewController: UIViewController {
         defaults.setDouble(billAmount, forKey: "lastBillAmount")
     }
 
-    func showView(viewFunc: Void -> Void, withAnimation: Bool) {
-        if withAnimation {
-            UIView.animateWithDuration(0.5, delay: 0, options: [], animations: {
-                viewFunc()
-            }, completion: nil)
-        } else {
+    func showView(viewFunc: Void -> Void) {
+        UIView.animateWithDuration(0.5, animations: {
             viewFunc()
-        }
+        })
     }
 
     func showInitialView() {
-        var billFieldFrame = self.billField.frame
-        billFieldFrame.origin.y = 170
-        self.billField.frame = billFieldFrame
-
+        billFieldTopConstraint.constant = 120
         self.lowerSubView.alpha = 0
-        var lowerSubViewFrame = self.lowerSubView.frame
-        lowerSubViewFrame.origin.y = 500
-        self.lowerSubView.frame = lowerSubViewFrame
+        self.view.layoutIfNeeded()
     }
 
     func showPopulatedView() {
-        var billFieldFrame = self.billField.frame
-        billFieldFrame.origin.y = 70
-        self.billField.frame = billFieldFrame
-
+        billFieldTopConstraint.constant = 22
         self.lowerSubView.alpha = 1
-        var lowerSubViewFrame = self.lowerSubView.frame
-        lowerSubViewFrame.origin.y = 150
-        self.lowerSubView.frame = lowerSubViewFrame
+        self.view.layoutIfNeeded()
     }
 
     func applyDarkTheme() {
-        self.viewController.backgroundColor = UIColor.blackColor()
-        self.lowerSubView.backgroundColor = UIColor.blackColor()
+        self.viewController.backgroundColor = darkColor
+        self.lowerSubView.backgroundColor = darkColor
         self.billField.textColor = UIColor.whiteColor()
         self.billField.tintColor = UIColor.whiteColor()
         self.billField.attributedPlaceholder = NSAttributedString(string:"$",
             attributes:[NSForegroundColorAttributeName: UIColor.whiteColor()])
-        self.tipControl.backgroundColor = UIColor.blackColor()
+        self.tipControl.backgroundColor = darkColor
         self.tipControl.tintColor = UIColor.whiteColor()
         self.tipLabel.textColor = UIColor.whiteColor()
         self.totalLabel.textColor = UIColor.whiteColor()
     }
 
     func applyLightTheme() {
-        self.viewController.backgroundColor = UIColor.whiteColor()
-        self.lowerSubView.backgroundColor = UIColor.whiteColor()
+        self.viewController.backgroundColor = lightColor
+        self.lowerSubView.backgroundColor = lightColor
         self.billField.textColor = UIColor.blackColor()
         self.billField.tintColor = UIColor.blackColor()
         self.billField.attributedPlaceholder = NSAttributedString(string:"$",
             attributes:[NSForegroundColorAttributeName: UIColor.grayColor()])
-        self.tipControl.backgroundColor = UIColor.whiteColor()
+        self.tipControl.backgroundColor = lightColor
         self.tipControl.tintColor = UIColor.blackColor()
         self.tipLabel.textColor = UIColor.blackColor()
         self.totalLabel.textColor = UIColor.blackColor()

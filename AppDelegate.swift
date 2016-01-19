@@ -17,9 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
         let standardDefaults = NSUserDefaults.standardUserDefaults()
         let appDefaults = [
-            "firstPercentage": 18,
-            "secondPercentage": 20,
-            "thirdPercentage": 22,
+            "tipPercentages": [18, 20, 22],
             "lightTheme": true
         ]
         standardDefaults.registerDefaults(appDefaults)

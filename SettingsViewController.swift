@@ -20,9 +20,10 @@ class SettingsViewController: UIViewController {
         super.viewDidLoad()
 
         let defaults = NSUserDefaults.standardUserDefaults()
-        firstPercentage.text = String(defaults.integerForKey("firstPercentage"))
-        secondPercentage.text = String(defaults.integerForKey("secondPercentage"))
-        thirdPercentage.text = String(defaults.integerForKey("thirdPercentage"))
+        let percentages = defaults.arrayForKey("tipPercentages")!
+        firstPercentage.text = String(percentages[0] as! NSNumber)
+        secondPercentage.text = String(percentages[1] as! NSNumber)
+        thirdPercentage.text = String(percentages[2] as! NSNumber)
         themeControl.selectedSegmentIndex = defaults.boolForKey("lightTheme") ? 0 : 1
     }
 
@@ -37,21 +38,16 @@ class SettingsViewController: UIViewController {
 
     @IBAction func save(sender: AnyObject) {
         let defaults = NSUserDefaults.standardUserDefaults()
-        defaults.setInteger(Int(firstPercentage.text!)!, forKey: "firstPercentage")
-        defaults.setInteger(Int(secondPercentage.text!)!, forKey: "secondPercentage")
-        defaults.setInteger(Int(thirdPercentage.text!)!, forKey: "thirdPercentage")
+
+        defaults.setObject(
+            [
+                Int(firstPercentage.text!)!,
+                Int(secondPercentage.text!)!,
+                Int(thirdPercentage.text!)!,
+            ],
+            forKey: "tipPercentages"
+        )
         defaults.setBool(themeControl.selectedSegmentIndex == 0, forKey: "lightTheme")
         dismissViewControllerAnimated(true, completion: nil)
     }
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
